@@ -1,0 +1,29 @@
+{
+  "name": "visualpde-datagen",
+  "version": "1.0.0",
+  "description": "Data generation pipeline for VisualPDE simulations",
+  "main": "datagen/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node datagen/index.js",
+    "dev": "tsx datagen/index.ts",
+    "generate": "tsx datagen/index.ts generate",
+    "test": "tsx datagen/index.ts run --preset GrayScott --frames 10 --output ./output/test"
+  },
+  "dependencies": {
+    "puppeteer": "^23.0.0",
+    "p-queue": "^8.0.1",
+    "commander": "^12.0.0",
+    "uuid": "^10.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "@types/node": "^22.0.0",
+    "@types/uuid": "^10.0.0",
+    "tsx": "^4.7.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

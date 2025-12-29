@@ -4,3 +4,6 @@ _site/
 Gemfile.lock
 *.psd
 node_modules/
+dist/
+output/
+*.log

@@ -90,7 +90,12 @@ import {
 } from "./TEX.js";
 import { closestMatch } from "../../../assets/js/closest-match.js";
 import { Stats } from "../stats.min.js";
-import { createWelcomeTour } from "./tours.js";
+
+// Headless mode check - set globals if running in headless mode
+if (typeof window !== "undefined" && window.HEADLESS_MODE) {
+  window.expandingOptionsInProgress = false;
+  window.linkParsed = true;
+}
 
 if (expandingOptionsInProgress) {
   let checkIfOptionsLoaded = setInterval(() => {
@@ -721,7 +726,7 @@ async function VisualPDE(url) {
   });
   $("#start_tour").click(function () {
     $("#welcome").css("display", "none");
-    tour.start();
+    tour?.start();
     window.gtag?.("event", "manual_intro_tour");
   });
   $("#close-bcs-ui").click(function () {
@@ -746,7 +751,11 @@ async function VisualPDE(url) {
     addView();
   });
 
-  let tour = createWelcomeTour(onMobile());
+  // Skip tour creation in headless mode (tours.js not loaded)
+  let tour = null;
+  if (!window.HEADLESS_MODE && typeof createWelcomeTour === "function") {
+    tour = createWelcomeTour(onMobile());
+  }
 
   // Welcome message. Display if someone is not a returning user, or if they haven't seen the full welcome message.
   const viewFullWelcome = !(isStory || uiHidden);
@@ -798,8 +807,12 @@ async function VisualPDE(url) {
       ["complete", "cancel"].forEach(function (event) {
         Shepherd?.once(event, () => resolve());
       });
-      tour.start();
-      window.gtag?.("event", "intro_tour");
+      if (tour) {
+        tour.start();
+        window.gtag?.("event", "intro_tour");
+      } else {
+        resolve();
+      }
     });
     if (restart) {
       playSim();
@@ -4465,26 +4478,30 @@ async function VisualPDE(url) {
   }
 
   function pauseSim() {
-    if (!uiHidden) {
+    if (!uiHidden && !window.HEADLESS_MODE) {
       $("#pause").hide();
       $("#pause").invisible();
       $("#play").show();
       $("#play").visible();
     }
     isRunning = false;
-    renderIfNotRunning();
+    if (!window.HEADLESS_MODE) {
+      renderIfNotRunning();
+    }
   }
 
   function playSim() {
-    if (!uiHidden) {
+    if (!uiHidden && !window.HEADLESS_MODE) {
       $("#play").hide();
       $("#play").invisible();
       $("#pause").show();
       $("#pause").visible();
     }
     shouldCheckNaN = true;
-    window.clearTimeout(NaNTimer);
-    NaNTimer = setTimeout(checkForNaN, 1000);
+    if (!window.HEADLESS_MODE) {
+      window.clearTimeout(NaNTimer);
+      NaNTimer = setTimeout(checkForNaN, 1000);
+    }
     isRunning = true;
   }
 
@@ -4492,20 +4509,30 @@ async function VisualPDE(url) {
     if (options.setSeed) {
       seed = options.randSeed;
     }
+    // Support external seed for reproducibility in headless mode
+    if (window.VPDE_SEED !== undefined) {
+      seed = window.VPDE_SEED;
+    }
     updateRandomSeed();
     uniforms.t.value = 0.0;
     canAutoPause = true;
-    updateTimeDisplay();
+    if (!window.HEADLESS_MODE) {
+      updateTimeDisplay();
+    }
     clearTextures();
-    clearProbe();
+    if (!window.HEADLESS_MODE) {
+      clearProbe();
+    }
     render(true);
     // Reset time-tracking stats.
     lastT = uniforms.t.value;
     lastTime = performance.now();
-    // Start a timer that checks for NaNs every second.
-    shouldCheckNaN = true;
-    window.clearTimeout(NaNTimer);
-    checkForNaN();
+    // Start a timer that checks for NaNs every second (not in headless mode).
+    if (!window.HEADLESS_MODE) {
+      shouldCheckNaN = true;
+      window.clearTimeout(NaNTimer);
+      checkForNaN();
+    }
   }
 
   function parseReactionStrings() {
@@ -11679,5 +11706,87 @@ async function VisualPDE(url) {
       str = `${val.trim()} | ${str}`;
     }
     document.title = str;
+  }
+
+  // =========================================================================
+  // HEADLESS MODE API EXPOSURE
+  // =========================================================================
+  // Expose internal functions for programmatic control in headless mode
+  if (typeof window !== "undefined" && window.HEADLESS_MODE) {
+    window.VPDE = {
+      // Simulation control
+      play: playSim,
+      pause: pauseSim,
+      reset: resetSim,
+
+      // Timestep control
+      step: function () {
+        timestep();
+      },
+      stepN: function (n) {
+        for (let i = 0; i < n; i++) {
+          timestep();
+        }
+      },
+      render: function () {
+        render();
+      },
+
+      // State access
+      getTime: function () {
+        return uniforms.t.value;
+      },
+      getOptions: function () {
+        return JSON.parse(JSON.stringify(options));
+      },
+
+      // Configuration
+      loadPreset: loadPreset,
+      setOption: function (key, val) {
+        options[key] = val;
+      },
+      updateProblem: updateProblem,
+
+      // Brush intervention (replaces mouse interaction)
+      applyBrush: function (x, y, species, value, radius) {
+        // Set brush coordinates (normalized 0-1)
+        uniforms.brushCoords.value.set(x, y);
+
+        // Configure brush
+        options.whatToDraw = species;
+        options.brushValue = String(value);
+        options.brushRadius = String(radius);
+
+        // Rebuild brush shader with new settings
+        setBrushType();
+
+        // Apply brush
+        const originalIsDrawing = isDrawing;
+        isDrawing = true;
+        draw();
+        isDrawing = originalIsDrawing;
+      },
+
+      // Frame capture (canvas has preserveDrawingBuffer: true)
+      captureFrame: function () {
+        return canvas.toDataURL("image/png");
+      },
+
+      // Get raw simulation state (for advanced use)
+      getRawState: function () {
+        fillBuffer();
+        return Array.from(buffer);
+      },
+
+      // Internals for advanced debugging
+      _uniforms: uniforms,
+      _options: options,
+      _renderer: renderer,
+      _canvas: canvas,
+    };
+
+    // Signal that API is ready
+    window.VPDE_READY = true;
+    console.log("VisualPDE headless API ready");
   }
 }
