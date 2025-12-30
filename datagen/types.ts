@@ -322,6 +322,9 @@ export interface BrowserPoolConfig {
 
   /** Maximum simulations before browser restart (to prevent memory leaks) */
   maxSimsPerBrowser?: number;
+
+  /** Use SwiftShader for software WebGL rendering (for headless/WSL/HPC environments) */
+  useSwiftShader?: boolean;
 }
 
 // ============================================================================

@@ -302,7 +302,9 @@ async function VisualPDE(url) {
   const stats = new Stats();
   stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
   stats.dom.id = "stats";
-  document.body.appendChild(stats.dom);
+  if (!window.HEADLESS_MODE) {
+    document.body.appendChild(stats.dom);
+  }
 
   // Setup some configurable options.
   options = {};
@@ -758,10 +760,12 @@ async function VisualPDE(url) {
   }
 
   // Welcome message. Display if someone is not a returning user, or if they haven't seen the full welcome message.
+  // Skip in headless mode (no welcome dialog elements).
   const viewFullWelcome = !(isStory || uiHidden);
   let wantsTour = params.has("tour");
   let restart = isRunning;
   if (
+    !window.HEADLESS_MODE &&
     (!isReturningUser() || (viewFullWelcome && !seenFullWelcomeUser())) &&
     options.preset != "Banner" &&
     !(logo_only || cleanDisplay)
@@ -802,7 +806,7 @@ async function VisualPDE(url) {
       playSim();
     }
   }
-  if (wantsTour) {
+  if (!window.HEADLESS_MODE && wantsTour) {
     await new Promise(function (resolve) {
       ["complete", "cancel"].forEach(function (event) {
         Shepherd?.once(event, () => resolve());
@@ -818,7 +822,7 @@ async function VisualPDE(url) {
       playSim();
     }
   }
-  if ($("#help").is(":visible")) {
+  if (!window.HEADLESS_MODE && $("#help").is(":visible")) {
     $("#get_help").fadeIn(1000);
     setTimeout(() => $("#get_help").fadeOut(1000), 4000);
   }
@@ -908,7 +912,7 @@ async function VisualPDE(url) {
   isLoading = false;
   resetSim();
   animate();
-  if (options.captureWebcam) {
+  if (!window.HEADLESS_MODE && options.captureWebcam) {
     // Show the webcam access pane.
     $("#webcam_access").show();
     // Attach a listener to the button in the webcam access pane that will configure the webcam.
@@ -919,15 +923,17 @@ async function VisualPDE(url) {
   }
 
   // Monitor the rate at which time is being increased in the simulation.
-  setInterval(function () {
-    rate = (1e3 * (uniforms.t.value - lastT)) / (performance.now() - lastTime);
-    lastT = uniforms.t.value;
-    lastTime = performance.now();
-    if (options.showStats) {
-      document.getElementById("rateOfProgressValue").innerHTML =
-        rate.toPrecision(2) + "/s";
-    }
-  }, 1000);
+  if (!window.HEADLESS_MODE) {
+    setInterval(function () {
+      rate = (1e3 * (uniforms.t.value - lastT)) / (performance.now() - lastTime);
+      lastT = uniforms.t.value;
+      lastTime = performance.now();
+      if (options.showStats) {
+        document.getElementById("rateOfProgressValue").innerHTML =
+          rate.toPrecision(2) + "/s";
+      }
+    }, 1000);
+  }
 
   const darkOS = window.matchMedia("(prefers-color-scheme: dark)");
   // Listen for the changes in the OS settings, and refresh equation display.
@@ -1186,11 +1192,12 @@ async function VisualPDE(url) {
     setCanvasShape();
     resize();
 
-    // Create a GUI.
-    initGUI();
-
-    // Configure the GUI.
-    configureGUI();
+    // Create a GUI (skip in headless mode).
+    if (!window.HEADLESS_MODE) {
+      initGUI();
+      // Configure the GUI.
+      configureGUI();
+    }
 
     // Add tabIndex="0" to all ui_buttons, unless they have tabindex="-1".
     document.querySelectorAll(".ui_button").forEach((button) => {
@@ -1220,8 +1227,10 @@ async function VisualPDE(url) {
     // Set the initial condition.
     resetSim();
 
-    // Create a probe chart.
-    createProbeChart();
+    // Create a probe chart (skip in headless mode).
+    if (!window.HEADLESS_MODE) {
+      createProbeChart();
+    }
 
     // Listen for pointer events.
     canvas.addEventListener("pointerdown", onDocumentPointerDown);
@@ -1322,39 +1331,41 @@ async function VisualPDE(url) {
       this.value = null;
     });
 
-    // Listen for clicks on the clickAreas for setting the boundary conditions.
-    document
-      .getElementById("topClickArea")
-      .addEventListener("click", function () {
-        comboBCsOptions.side = "top";
-        $(".clickArea").removeClass("selected");
-        $("#topClickArea").addClass("selected");
-        configureComboBCsGUI();
-      });
-    document
-      .getElementById("bottomClickArea")
-      .addEventListener("click", function () {
-        comboBCsOptions.side = "bottom";
-        $(".clickArea").removeClass("selected");
-        $("#bottomClickArea").addClass("selected");
-        configureComboBCsGUI();
-      });
-    document
-      .getElementById("leftClickArea")
-      .addEventListener("click", function () {
-        comboBCsOptions.side = "left";
-        $(".clickArea").removeClass("selected");
-        $("#leftClickArea").addClass("selected");
-        configureComboBCsGUI();
-      });
-    document
-      .getElementById("rightClickArea")
-      .addEventListener("click", function () {
-        comboBCsOptions.side = "right";
-        $(".clickArea").removeClass("selected");
-        $("#rightClickArea").addClass("selected");
-        configureComboBCsGUI();
-      });
+    // Listen for clicks on the clickAreas for setting the boundary conditions (skip in headless mode).
+    if (!window.HEADLESS_MODE) {
+      document
+        .getElementById("topClickArea")
+        .addEventListener("click", function () {
+          comboBCsOptions.side = "top";
+          $(".clickArea").removeClass("selected");
+          $("#topClickArea").addClass("selected");
+          configureComboBCsGUI();
+        });
+      document
+        .getElementById("bottomClickArea")
+        .addEventListener("click", function () {
+          comboBCsOptions.side = "bottom";
+          $(".clickArea").removeClass("selected");
+          $("#bottomClickArea").addClass("selected");
+          configureComboBCsGUI();
+        });
+      document
+        .getElementById("leftClickArea")
+        .addEventListener("click", function () {
+          comboBCsOptions.side = "left";
+          $(".clickArea").removeClass("selected");
+          $("#leftClickArea").addClass("selected");
+          configureComboBCsGUI();
+        });
+      document
+        .getElementById("rightClickArea")
+        .addEventListener("click", function () {
+          comboBCsOptions.side = "right";
+          $(".clickArea").removeClass("selected");
+          $("#rightClickArea").addClass("selected");
+          configureComboBCsGUI();
+        });
+    }
     camCanvas = document.createElement("canvas");
   }
 
@@ -1608,6 +1619,8 @@ async function VisualPDE(url) {
   }
 
   function setSimCSS() {
+    // Skip CSS manipulation in headless mode (no header element)
+    if (window.HEADLESS_MODE) return;
     // Set the CSS of simulation page, accounting for the header visible on larger screens.
     const headerStyles = window.getComputedStyle(
       document.getElementById("header"),
@@ -5344,9 +5357,11 @@ async function VisualPDE(url) {
     // Configure views.
     configureViews();
 
-    // Replace the GUI.
-    deleteGUIs();
-    initGUI();
+    // Replace the GUI (skip in headless mode).
+    if (!window.HEADLESS_MODE) {
+      deleteGUIs();
+      initGUI();
+    }
 
     // Apply any specified view.
     if (options.activeViewInd >= options.views.length) {
@@ -5392,11 +5407,13 @@ async function VisualPDE(url) {
     // To get around an annoying bug in dat.GUI.image, in which the
     // controller doesn't update the value of the underlying property,
     // we'll destroy and create a new image controller everytime we load
-    // a preset.
-    imControllerOne.remove();
-    imControllerTwo.remove();
-    imControllerBlend.remove();
-    createImageControllers();
+    // a preset. (Skip in headless mode - no GUI).
+    if (!window.HEADLESS_MODE && imControllerOne) {
+      imControllerOne.remove();
+      imControllerTwo.remove();
+      imControllerBlend.remove();
+      createImageControllers();
+    }
 
     // Configure interpolation.
     configureManualInterpolation();
@@ -5601,6 +5618,7 @@ async function VisualPDE(url) {
   }
 
   function refreshGUI(folder, typeset) {
+    if (window.HEADLESS_MODE) return;
     if (typeset == undefined) {
       typeset = true;
     }
@@ -5682,6 +5700,8 @@ async function VisualPDE(url) {
   }
 
   function setBCsGUI() {
+    // Skip in headless mode (no GUI).
+    if (window.HEADLESS_MODE) return;
     // Update the GUI.
     if (options.boundaryConditions_1 == "dirichlet") {
       controllers["dirichletU"].show();
@@ -5931,6 +5951,7 @@ async function VisualPDE(url) {
     // Invalidate the solution buffer.
     bufferFilled = false;
     setPostFunFragShader();
+    if (window.HEADLESS_MODE) return;
     controllers["minColourValue"].show();
     controllers["maxColourValue"].show();
     configureColourbar();
@@ -5938,6 +5959,7 @@ async function VisualPDE(url) {
   }
 
   function showVGUIPanels() {
+    if (window.HEADLESS_MODE) return;
     if (options.timescales) controllers["TV"].show();
     if (options.crossDiffusion) {
       controllers["Duv"].show();
@@ -5953,6 +5975,7 @@ async function VisualPDE(url) {
   }
 
   function showWGUIPanels() {
+    if (window.HEADLESS_MODE) return;
     if (options.timescales) controllers["TW"].show();
     if (options.crossDiffusion) {
       controllers["Duw"].show();
@@ -5972,6 +5995,7 @@ async function VisualPDE(url) {
   }
 
   function showQGUIPanels() {
+    if (window.HEADLESS_MODE) return;
     if (options.timescales) controllers["TQ"].show();
     if (options.crossDiffusion) {
       controllers["Duq"].show();
@@ -5995,6 +6019,7 @@ async function VisualPDE(url) {
   }
 
   function hideVGUIPanels() {
+    if (window.HEADLESS_MODE) return;
     controllers["TV"].hide();
     controllers["Duv"].hide();
     controllers["Dvu"].hide();
@@ -6005,6 +6030,7 @@ async function VisualPDE(url) {
   }
 
   function hideWGUIPanels() {
+    if (window.HEADLESS_MODE) return;
     controllers["TW"].hide();
     controllers["Duw"].hide();
     controllers["Dvw"].hide();
@@ -6017,6 +6043,7 @@ async function VisualPDE(url) {
   }
 
   function hideQGUIPanels() {
+    if (window.HEADLESS_MODE) return;
     controllers["TQ"].hide();
     controllers["Duq"].hide();
     controllers["Dvq"].hide();
@@ -6180,6 +6207,8 @@ async function VisualPDE(url) {
   }
 
   function configureGUI() {
+    // Skip in headless mode (no GUI).
+    if (window.HEADLESS_MODE) return;
     // Set up the GUI based on the the current options: numSpecies, crossDiffusion, and numAlgebraicSpecies.
     let tooltip =
       "function of " +
@@ -8564,9 +8593,11 @@ async function VisualPDE(url) {
     updateView("maxColourValue");
     uniforms.minColourValue.value = cLims[0];
     uniforms.maxColourValue.value = cLims[1];
-    controllers["maxColourValue"].updateDisplay();
-    controllers["minColourValue"].updateDisplay();
-    updateColourbarLims();
+    if (!window.HEADLESS_MODE) {
+      controllers["maxColourValue"].updateDisplay();
+      controllers["minColourValue"].updateDisplay();
+      updateColourbarLims();
+    }
   }
 
   /**
@@ -10167,6 +10198,7 @@ async function VisualPDE(url) {
    * Configures the custom surface controllers based on the current plot type and options.
    */
   function configureCustomSurfaceControllers() {
+    if (window.HEADLESS_MODE) return;
     if (options.plotType == "surface") {
       $(surfaceButtons).show();
       if (options.customSurface) {
@@ -10670,6 +10702,7 @@ async function VisualPDE(url) {
    * @returns {Promise} A promise that resolves when typesetting is complete.
    */
   function runMathJax(args) {
+    if (typeof MathJax === "undefined") return;
     if (MathJax.typesetPromise != undefined)
       return MathJax.typesetPromise(args);
   }
@@ -11091,6 +11124,7 @@ async function VisualPDE(url) {
   }
 
   function configureComboBCsGUI(type) {
+    if (window.HEADLESS_MODE) return;
     comboBCsOptions.type = type || "periodic";
     comboBCsOptions.value = "0";
     let indText = (comboBCsOptions.speciesInd + 1).toString();
@@ -11389,7 +11423,7 @@ async function VisualPDE(url) {
   }
 
   function configureProbe() {
-    if (!probeChart) return;
+    if (!probeChart || window.HEADLESS_MODE) return;
     clearProbe();
     if (options.probing) {
       $("#probeChartContainer").show();

@@ -26,8 +26,8 @@ PNG sequences with metadata for machine learning training.
 ```bash
 sudo apt-get update
 sudo apt-get install -y \
-  libnss3 libxss1 libasound2 libatk1.0-0 libatk-bridge2.0-0 \
-  libcups2 libdrm2 libgbm1 libgtk-3-0 libxcomposite1 libxdamage1 \
+  libnss3 libxss1 libasound2t64 libatk1.0-0t64 libatk-bridge2.0-0t64 \
+  libcups2t64 libdrm2 libgbm1 libgtk-3-0t64 libxcomposite1 libxdamage1 \
   libxfixes3 libxrandr2 libpango-1.0-0 libcairo2
 ```
 

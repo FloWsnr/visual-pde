@@ -52,6 +52,7 @@ program
   .option("-h, --height <number>", "Canvas height", "512")
   .option("-s, --seed <number>", "Random seed for reproducibility")
   .option("--no-headless", "Show browser window (for debugging)")
+  .option("--gpu", "Use GPU rendering (requires GPU, default is software SwiftShader)")
   .action(async (opts) => {
     const id = uuidv4();
     const outputDir = path.join(opts.output, opts.preset, id);
@@ -72,6 +73,7 @@ program
       width: parseInt(opts.width),
       height: parseInt(opts.height),
       htmlPath: HEADLESS_HTML,
+      useSwiftShader: !opts.gpu, // Use SwiftShader by default, GPU if --gpu flag
     };
 
     console.log(`Running simulation: ${opts.preset}`);
@@ -105,6 +107,7 @@ program
   .requiredOption("-c, --config <file>", "Batch config file (JSON)")
   .option("-w, --workers <number>", "Number of parallel workers", "4")
   .option("--no-headless", "Show browser windows")
+  .option("--gpu", "Use GPU rendering (requires GPU, default is software SwiftShader)")
   .action(async (opts) => {
     const configPath = path.resolve(opts.config);
     const configText = await fs.readFile(configPath, "utf-8");
@@ -120,6 +123,7 @@ program
       height: 512,
       htmlPath: HEADLESS_HTML,
       maxSimsPerBrowser: 50,
+      useSwiftShader: !opts.gpu,
     };
 
     console.log(`Running batch with ${batchConfig.simulations.length} simulations`);
@@ -158,6 +162,7 @@ program
   .option("--randomize", "Randomize parameters", false)
   .option("--interventions", "Add random interventions", false)
   .option("--no-headless", "Show browser windows")
+  .option("--gpu", "Use GPU rendering (requires GPU, default is software SwiftShader)")
   .action(async (opts) => {
     const presets = opts.presets.split(",").map((p: string) => p.trim());
 
@@ -189,6 +194,7 @@ program
       height: parseInt(opts.height),
       htmlPath: HEADLESS_HTML,
       maxSimsPerBrowser: 50,
+      useSwiftShader: !opts.gpu,
     };
 
     console.log(`\nGenerating ${opts.count} simulations`);

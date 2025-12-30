@@ -39,17 +39,30 @@ export class BrowserPool {
    * Launch a new browser instance
    */
   private async launchBrowser(): Promise<Browser> {
+    // Determine GL backend based on config or environment
+    // For headless/WSL/HPC environments, use SwiftShader (software WebGL)
+    const useSwiftShader = this.config.useSwiftShader ?? true;
+
+    const glArgs = useSwiftShader
+      ? [
+          "--use-gl=angle",
+          "--use-angle=swiftshader-webgl",
+          "--enable-unsafe-swiftshader",
+        ]
+      : [
+          "--use-gl=egl", // Use EGL for GPU rendering (requires GPU)
+        ];
+
     return puppeteer.launch({
       headless: this.config.headless,
       args: [
-        "--use-gl=egl", // Use EGL for GPU rendering
+        ...glArgs,
         "--enable-webgl",
         "--enable-webgl2",
         "--disable-web-security", // Allow file:// access
         "--no-sandbox",
         "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
-        "--disable-accelerated-2d-canvas",
         "--disable-gpu-sandbox",
         `--window-size=${this.config.width},${this.config.height}`,
       ],
