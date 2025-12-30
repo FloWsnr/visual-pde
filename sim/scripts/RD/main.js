@@ -89,24 +89,15 @@ import {
   substituteGreek,
 } from "./TEX.js";
 import { closestMatch } from "../../../assets/js/closest-match.js";
-import { Stats } from "../stats.min.js";
+// HEADLESS-ONLY VERSION - GUI code removed
+// No Stats.js import needed for headless mode
 
-// Headless mode check - set globals if running in headless mode
-if (typeof window !== "undefined" && window.HEADLESS_MODE) {
-  window.expandingOptionsInProgress = false;
-  window.linkParsed = true;
-}
+// Always in headless mode now
+window.HEADLESS_MODE = true;
+window.expandingOptionsInProgress = false;
+window.linkParsed = true;
 
-if (expandingOptionsInProgress) {
-  let checkIfOptionsLoaded = setInterval(() => {
-    if (linkParsed) {
-      clearInterval(checkIfOptionsLoaded);
-      VisualPDE(simURL);
-    }
-  }, 50);
-} else {
-  VisualPDE();
-}
+VisualPDE();
 
 async function VisualPDE(url) {
   let canvas, gl, manualInterpolationNeeded, camCanvas;
@@ -299,12 +290,7 @@ async function VisualPDE(url) {
   parser.consts.Pi = Math.PI;
   parser.consts.e = Math.exp(1.0);
 
-  const stats = new Stats();
-  stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
-  stats.dom.id = "stats";
-  if (!window.HEADLESS_MODE) {
-    document.body.appendChild(stats.dom);
-  }
+  // Stats.js removed for headless mode
 
   // Setup some configurable options.
   options = {};
@@ -382,19 +368,7 @@ async function VisualPDE(url) {
     };
   })();
 
-  // Define some handy functions for making things invisible or visible.
-  (function ($) {
-    $.fn.invisible = function () {
-      return this.each(function () {
-        $(this).css("visibility", "hidden");
-      });
-    };
-    $.fn.visible = function () {
-      return this.each(function () {
-        $(this).css("visibility", "visible");
-      });
-    };
-  })(jQuery);
+  // jQuery plugin extensions removed for headless mode
 
   // Get the canvas to draw on, as specified by the html.
   canvas = document.getElementById("simCanvas");
@@ -443,48 +417,13 @@ async function VisualPDE(url) {
     }
   };
 
-  // Check URL for any specified options.
-  // Take the URL stored as a string in url (if it exists) and get the search parameters
-  // from it. If it doesn't exist, use the current URL.
+  // Check URL for any specified options (headless-only, no UI handling).
   const params = new URLSearchParams(
     (url ? url.split("?")[1] : window.location.search).replaceAll("&amp;", "&"),
   );
 
-  if (params.has("no_ui")) {
-    // Hide all the ui, including buttons.
-    $(".ui").addClass("hidden");
-    uiHidden = true;
-  } else {
-    $(".ui").removeClass("hidden");
-    $("#probeChartMaximise").hide();
-  }
-
-  const logo_only = params.has("logo_only");
-  if (logo_only) {
-    // Hide all ui except the logo.
-    $(".ui").addClass("hidden");
-    $("#logo").removeClass("hidden");
-    uiHidden = true;
-  } else if (!fromExternalLink()) {
-    // Remove the logo if we're from an internal link.
-    $("#logo").hide();
-  }
-
-  const cleanDisplay = params.has("clean");
-  if (cleanDisplay) {
-    $(".ui").addClass("hidden");
-    $("#logo").hide();
-    uiHidden = true;
-  }
-
-  if (params.has("reset_only")) {
-    // Hide all ui except the reset button.
-    $(".ui").addClass("hidden");
-    $("#erase").removeClass("hidden");
-    $("#erase").css("top", "0");
-    $("#logo").hide();
-    uiHidden = true;
-  }
+  // UI-related params removed for headless mode
+  uiHidden = true;
 
   if (params.has("sf")) {
     // Set the domain scale factor from the search string.
@@ -492,13 +431,6 @@ async function VisualPDE(url) {
     if (isNaN(domainScaleFactor) || domainScaleFactor <= 0) {
       domainScaleFactor = 1;
     }
-  }
-
-  if (inIframe()) {
-    // If we're in an iframe, disable the header.
-    $("#header").addClass("hidden");
-  } else {
-    $("#header").removeClass("hidden");
   }
 
   // Load default options.
@@ -562,391 +494,16 @@ async function VisualPDE(url) {
     applyView(options.views[options.activeViewInd]);
   }
 
-  // If this is a Visual Story, hide all buttons apart from play/pause, erase and views.
-  isStory = params.has("story");
-  if (isStory) {
-    $("#settings").addClass("hidden");
-    $("#equations").addClass("hidden");
-    $("#help").addClass("hidden");
-    $("#share").addClass("hidden");
-    $("#probeChartContainer").addClass("hidden");
-    editViewFolder.domElement.classList.add("hidden");
-    $("#add_view").addClass("hidden");
-    configureColourbar();
+  // Story mode and UI button handlers removed for headless mode
+  isStory = false;
 
-    $("#play").css("top", "-=50");
-    $("#pause").css("top", "-=50");
-    $("#play_pause_placeholder").css("top", "-=50");
-    if (!params.has("reset_only")) $("#erase").css("top", "-=50");
-    $("#views").css("top", "-=50");
-    $("#views_ui").css("top", "-=50");
-    viewUIOffsetInit = $(":root").css("--views-ui-offset");
-    $(":root").css("--views-ui-offset", "-=50");
-  }
-
-  /* GUI settings and equations buttons */
-  $("#settings").click(function () {
-    window.gtag?.("event", "settings_open");
-    toggleRightUI();
-    if ($("#right_ui").is(":visible") && $("#help_panel").is(":visible")) {
-      toggleHelpPanel();
-    }
-    if ($("#right_ui").is(":visible") && $("#share_panel").is(":visible")) {
-      toggleSharePanel();
-    }
-    if (window.innerWidth < 629 && $("#right_ui").is(":visible")) {
-      if ($("#left_ui").is(":visible")) toggleLeftUI();
-      if ($("#views_ui").is(":visible")) toggleViewsUI();
-    }
-    if ($("#left_ui").is(":visible")) resizeEquationDisplay();
-  });
-  $("#equations").click(function () {
-    window.gtag?.("event", "equations_open");
-    toggleLeftUI();
-    resizeEquationDisplay();
-    if (
-      window.innerWidth < 629 &&
-      $("#right_ui").is(":visible") &&
-      $("#left_ui").is(":visible")
-    ) {
-      toggleRightUI();
-    }
-    if ($("#views_ui").is(":visible") && $("#left_ui").is(":visible")) {
-      toggleViewsUI();
-    }
-    if ($("#share_panel").is(":visible")) {
-      toggleSharePanel();
-      abortShorten();
-    }
-  });
-  $("#pause").click(function () {
-    pauseSim();
-    document.getElementById("play").focus();
-  });
-  $("#play").click(function () {
-    playSim();
-    document.getElementById("pause").focus();
-  });
-  $("#erase").click(function () {
-    window.gtag?.("event", "sim_reset");
-    resetSim();
-  });
-  $("#share").click(function () {
-    window.gtag?.("event", "share_menu_open");
-    toggleSharePanel();
-    if ($("#share_panel").is(":visible")) {
-      // Generate and minify the simulation link.
-      getSimURL();
-      // Close the equations and views menus.
-      if ($("#left_ui").is(":visible")) {
-        toggleLeftUI();
-      }
-      if ($("#views_ui").is(":visible")) {
-        toggleViewsUI();
-      }
-    } else {
-      // Abort any running minification process.
-      abortShorten();
-    }
-    if ($("#help_panel").is(":visible")) {
-      toggleHelpPanel();
-    }
-    if ($("#right_ui").is(":visible")) {
-      toggleRightUI();
-    }
-  });
-  $("#help").click(function () {
-    window.gtag?.("event", "help_menu_open");
-    toggleHelpPanel();
-    if ($("#share_panel").is(":visible")) {
-      toggleSharePanel();
-    }
-  });
-  $("#screenshot").click(function () {
-    window.gtag?.("event", "screenshot");
-    takeAScreenshot = true;
-    render();
-    toggleSharePanel();
-  });
-  $("#record").click(function () {
-    // Record a video of the simulation.
-    window.gtag?.("event", "recording_started");
-    stopRecording();
-    startRecording();
-    toggleSharePanel();
-  });
-  $("#stop_recording").click(function () {
-    // Stop recording a video of the simulation.
-    stopRecording();
-  });
-  $("#video_quality").change(function () {
-    $("#video_quality").blur();
-  });
-  $("#link").click(function () {
-    window.gtag?.("event", "link_copied");
-    funsObj.copyConfigAsURL();
-    toggleSharePanel();
-  });
-  $("#embed").click(function () {
-    window.gtag?.("event", "embed");
-    copyIframe();
-    toggleSharePanel();
-  });
-  $("#embed_ui_type").change(function () {
-    $("#embed_ui_type").blur();
-  });
-  $("#help_panel .container .button").click(function () {
-    toggleHelpPanel();
-  });
-  $("#views").click(function () {
-    window.gtag?.("event", "views_open");
-    toggleViewsUI();
-    if (
-      window.innerWidth < 629 &&
-      $("#right_ui").is(":visible") &&
-      $("#views_ui").is(":visible")
-    ) {
-      toggleRightUI();
-    }
-    if ($("#views_ui").is(":visible") && $("#left_ui").is(":visible")) {
-      toggleLeftUI();
-    }
-    if ($("#share_panel").is(":visible")) {
-      toggleSharePanel();
-      abortShorten();
-    }
-  });
-  $("#error_close_button").click(function () {
-    fadeout("#error");
-  });
-  $("#preset_error_close_button").click(function () {
-    fadeout("#bad_preset");
-  });
-  $("#oops_hit_nan_close").click(function () {
-    fadeout("#oops_hit_nan");
-    shouldCheckNaN = true;
-  });
-  $("#start_tour").click(function () {
-    $("#welcome").css("display", "none");
-    tour?.start();
-    window.gtag?.("event", "manual_intro_tour");
-  });
-  $("#close-bcs-ui").click(function () {
-    closeComboBCsGUI();
-  });
-  // Open the Definitions tab when the user clicks on the equation display.
-  $("#equation_display").click(function () {
-    editEquationsFolder.open();
-  });
-  $("#probeChartMinimise").click(function () {
-    $("#probeChartContainer").hide();
-    $("#probeChartMaximise").show();
-  });
-  $("#probeChartMaximise").click(function () {
-    $("#probeChartContainer").show();
-    $("#probeChartMaximise").hide();
-  });
-
-  // New, rename, delete
-  // (Dynamically created buttons, like the +, can't use .click())
-  $(document).on("click", "#add_view", function () {
-    addView();
-  });
-
-  // Skip tour creation in headless mode (tours.js not loaded)
-  let tour = null;
-  if (!window.HEADLESS_MODE && typeof createWelcomeTour === "function") {
-    tour = createWelcomeTour(onMobile());
-  }
-
-  // Welcome message. Display if someone is not a returning user, or if they haven't seen the full welcome message.
-  // Skip in headless mode (no welcome dialog elements).
-  const viewFullWelcome = !(isStory || uiHidden);
-  let wantsTour = params.has("tour");
-  let restart = isRunning;
-  if (
-    !window.HEADLESS_MODE &&
-    (!isReturningUser() || (viewFullWelcome && !seenFullWelcomeUser())) &&
-    options.preset != "Banner" &&
-    !(logo_only || cleanDisplay)
-  ) {
-    pauseSim();
-    let noButtonId = "welcome_no";
-    if (!viewFullWelcome) {
-      $("#tour_question").hide();
-      $("#lets_go_cont").show();
-      noButtonId = "lets_go";
-    }
-    // Display the welcome message.
-    $("#welcome").css("display", "block");
-    wantsTour =
-      wantsTour ||
-      (await Promise.race([
-        waitListener(document.getElementById("welcome_ok"), "click", true),
-        waitListener(document.getElementById(noButtonId), "click", false),
-        // A promise that resolves when "visited" is added to localStorage.
-        new Promise(function (resolve) {
-          var listener = function (e) {
-            if (e.key == "visited") {
-              window.removeEventListener("storage", listener);
-              resolve(false);
-            }
-          };
-          window.addEventListener("storage", listener);
-        }),
-      ]));
-    $("#welcome").css("display", "none");
-    // If they've interacted with anything, note that they have visited the site.
-    setReturningUser();
-    // Set cookie consent.
-    setCookieConsent();
-    // If someone hasn't seen the full welcome, don't stop them from seeing it next time.
-    if (viewFullWelcome) setSeenFullWelcomeUser();
-    if (!wantsTour && restart) {
-      playSim();
-    }
-  }
-  if (!window.HEADLESS_MODE && wantsTour) {
-    await new Promise(function (resolve) {
-      ["complete", "cancel"].forEach(function (event) {
-        Shepherd?.once(event, () => resolve());
-      });
-      if (tour) {
-        tour.start();
-        window.gtag?.("event", "intro_tour");
-      } else {
-        resolve();
-      }
-    });
-    if (restart) {
-      playSim();
-    }
-  }
-  if (!window.HEADLESS_MODE && $("#help").is(":visible")) {
-    $("#get_help").fadeIn(1000);
-    setTimeout(() => $("#get_help").fadeOut(1000), 4000);
-  }
-
-  // If the "Try clicking!" popup is allowed, show it iff we're from an external link
-  // or have loaded the default simulation.
-  if (
-    (fromExternalLink() ||
-      shouldLoadDefault ||
-      options.forceTryClickingPopup) &&
-    !options.suppressTryClickingPopup &&
-    options.brushEnabled &&
-    !cleanDisplay
-  ) {
-    $("#top_message").html("<p>" + options.tryClickingText + "</p>");
-    fadein("#top_message", 1000);
-    // Fadeout either after the user clicks on the canvas or 5s passes.
-    setTimeout(() => fadeout("#top_message"), 5000);
-    $("#simCanvas").one("pointerdown touchstart", () =>
-      fadeout("#top_message"),
-    );
-  }
-
-  // If we're in an iframe, set the logo to be a link to the current simulation on the main site just as it is clicked.
-  if (inIframe()) {
-    $("#logo").click(function (e) {
-      e.preventDefault();
-      getSimURL(false);
-      window.open(longSimURL);
-    });
-  }
-
-  // Determine whether or not we can optimise the FPS of the simulation.
-  // Typically, this is only disabled for synchronised simulations.
-  isOptimising = !params.has("noop") && options.optimiseFPS;
-
-  if (isOptimising) {
-    // If the tab has been opened in the background, delay the FPS optimisation until we return to the tab.
-    if (document.visibilityState === "hidden") {
-      becomingHidden();
-    } else {
-      // Otherwise, delay optimisation until FPS stabilises and listen out for becoming hidden.
-      becomingVisible();
-    }
-  }
-  // Add an observer to listen for becoming hidden if we're inside an iframe.
-  simObserver = new IntersectionObserver(
-    function (entries) {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          isSuspended = false;
-          if (isOptimising) becomingVisible();
-        } else {
-          isSuspended = true;
-          if (isOptimising) becomingHidden();
-        }
-      });
-    },
-    {
-      root: null,
-      threshold: 0,
-    },
-  );
-  simObserver.observe(document.getElementById("simCanvas"));
-
-  // Listen for dark-mode changes in local storage.
-  window.addEventListener("storage", function (e) {
-    if (e.key == "dark-mode") {
-      toggleDarkMode(e.newValue == "true", true);
-    }
-  });
-
-  // When navigating away from the page, store the URL reflecting the current state in history if anything has changed.
-  window.addEventListener("beforeunload", function (e) {
-    // Stop any recording.
-    if (isRecording) {
-      stopRecording();
-    }
-    // // Check if the simulation has changed (options.preset will have changed).
-    // if (Object.keys(diffObjects(getPreset(options.preset), options)).length) {
-    //   // If so, add the URL.
-    //   history.pushState({}, "", getSimURL());
-    // }
-  });
+  // Headless mode: no FPS optimization UI, observers, or webcam UI needed
+  isOptimising = false;
 
   // Begin the simulation.
   isLoading = false;
   resetSim();
   animate();
-  if (!window.HEADLESS_MODE && options.captureWebcam) {
-    // Show the webcam access pane.
-    $("#webcam_access").show();
-    // Attach a listener to the button in the webcam access pane that will configure the webcam.
-    document.getElementById("webcam_ok").addEventListener("click", () => {
-      configureWebcam();
-      $("#webcam_access").hide();
-    });
-  }
-
-  // Monitor the rate at which time is being increased in the simulation.
-  if (!window.HEADLESS_MODE) {
-    setInterval(function () {
-      rate = (1e3 * (uniforms.t.value - lastT)) / (performance.now() - lastTime);
-      lastT = uniforms.t.value;
-      lastTime = performance.now();
-      if (options.showStats) {
-        document.getElementById("rateOfProgressValue").innerHTML =
-          rate.toPrecision(2) + "/s";
-      }
-    }, 1000);
-  }
-
-  const darkOS = window.matchMedia("(prefers-color-scheme: dark)");
-  // Listen for the changes in the OS settings, and refresh equation display.
-  darkOS.addEventListener("change", (evt) => {
-    setEquationDisplayType();
-  });
-
-  // If a badLink was detected during the page load (from failed lookup of minification), let the user know.
-  if (badLink) {
-    throwPresetError(
-      "Sorry, we've not managed to resolve this minified link. Check the link and your internet connection. If the problem persists, please get in touch at hello@visualpde.com.",
-    );
-  }
 
   //---------------
 
@@ -1192,24 +749,7 @@ async function VisualPDE(url) {
     setCanvasShape();
     resize();
 
-    // Create a GUI (skip in headless mode).
-    if (!window.HEADLESS_MODE) {
-      initGUI();
-      // Configure the GUI.
-      configureGUI();
-    }
-
-    // Add tabIndex="0" to all ui_buttons, unless they have tabindex="-1".
-    document.querySelectorAll(".ui_button").forEach((button) => {
-      if (!button.getAttribute("tabindex")) {
-        button.tabIndex = 0;
-        button.addEventListener("keydown", function (e) {
-          if (e.key == "Enter") {
-            button.click();
-          }
-        });
-      }
-    });
+    // GUI initialization removed for headless mode
 
     // Set up the problem.
     updateProblem();
@@ -1227,145 +767,21 @@ async function VisualPDE(url) {
     // Set the initial condition.
     resetSim();
 
-    // Create a probe chart (skip in headless mode).
-    if (!window.HEADLESS_MODE) {
-      createProbeChart();
-    }
+    // Probe chart removed for headless mode
 
-    // Listen for pointer events.
+    // Pointer events still needed for programmatic brush control
     canvas.addEventListener("pointerdown", onDocumentPointerDown);
     canvas.addEventListener("contextmenu", (event) => event.preventDefault());
     canvas.addEventListener("pointerleave", onDocumentPointerUp);
     canvas.addEventListener("pointerup", onDocumentPointerUp);
     canvas.addEventListener("pointermove", onDocumentPointerMove);
 
-    // Listen for keypresses.
-    document.addEventListener("keypress", function onEvent(event) {
-      event = event || window.event;
-      var target = event.target;
-      var targetTagName =
-        target.nodeType == 1 ? target.nodeName.toUpperCase() : "";
-      if (!/INPUT|SELECT|TEXTAREA|SPAN/.test(targetTagName)) {
-        if (event.key === "h") {
-          if (uiHidden) {
-            if (!inIframe()) {
-              $("#header").removeClass("hidden");
-              resize();
-              renderIfNotRunning();
-            }
-            showAllUI();
-          } else {
-            hideAllUI();
-            $("#header").addClass("hidden");
-            resize();
-            renderIfNotRunning();
-          }
-        } else if (!(isStory && uiHidden)) {
-          // Don't allow for keyboard input if the ui is hidden in a Story.
-          if (event.key === "r") {
-            $("#erase").click();
-          }
-          if (event.key === " ") {
-            funsObj.toggleRunning();
-            event.preventDefault();
-          }
-          if (event.key == "s") {
-            saveSimState();
-          }
-          if (event.key == "c") {
-            options.resetFromCheckpoints = !options.resetFromCheckpoints;
-            updateToggle($("#checkpointButton")[0]);
-          }
-        }
-      }
-    });
-
-    $("#simTitle")
-      .on("keydown keypress", function (e) {
-        // Reset timer that blurs after inactivity.
-        clearTimeout(titleBlurTimer);
-        // Blur on enter key.
-        if (e.which == 13) {
-          this.blur();
-          return false;
-        }
-        var $self = $(this);
-        titleBlurTimer = setTimeout(function () {
-          $self.blur();
-          window.getSelection().removeAllRanges();
-        }, 5000);
-      })
-      .on("focus click", function () {
-        var $self = $(this);
-        clearTimeout(titleBlurTimer);
-        titleBlurTimer = setTimeout(function () {
-          $self.blur();
-          window.getSelection().removeAllRanges();
-        }, 5000);
-      })
-      .on("blur", function () {
-        // Save the title.
-        let val = removeExtraWhitespace(this.value.trim());
-        options.simTitle = val;
-        this.value = val;
-        setDocTitle(val);
-        clearTimeout(titleBlurTimer);
-      });
-
-    // Listen for resize events.
-    window.addEventListener(
-      "resize",
-      function () {
-        resize();
-        renderIfNotRunning();
-      },
-      false,
-    );
+    // Keyboard handlers removed for headless mode
 
     // Handle messages sent to the simulation.
     window.addEventListener("message", handleMessage);
 
-    // Bind the onchange event for the checkpoint loader.
-    $("#checkpointInput").change(function () {
-      loadSimState(this.files[0]);
-      this.value = null;
-    });
-
-    // Listen for clicks on the clickAreas for setting the boundary conditions (skip in headless mode).
-    if (!window.HEADLESS_MODE) {
-      document
-        .getElementById("topClickArea")
-        .addEventListener("click", function () {
-          comboBCsOptions.side = "top";
-          $(".clickArea").removeClass("selected");
-          $("#topClickArea").addClass("selected");
-          configureComboBCsGUI();
-        });
-      document
-        .getElementById("bottomClickArea")
-        .addEventListener("click", function () {
-          comboBCsOptions.side = "bottom";
-          $(".clickArea").removeClass("selected");
-          $("#bottomClickArea").addClass("selected");
-          configureComboBCsGUI();
-        });
-      document
-        .getElementById("leftClickArea")
-        .addEventListener("click", function () {
-          comboBCsOptions.side = "left";
-          $(".clickArea").removeClass("selected");
-          $("#leftClickArea").addClass("selected");
-          configureComboBCsGUI();
-        });
-      document
-        .getElementById("rightClickArea")
-        .addEventListener("click", function () {
-          comboBCsOptions.side = "right";
-          $(".clickArea").removeClass("selected");
-          $("#rightClickArea").addClass("selected");
-          configureComboBCsGUI();
-        });
-    }
+    // UI click areas removed for headless mode
     camCanvas = document.createElement("canvas");
   }
 
@@ -1613,27 +1029,11 @@ async function VisualPDE(url) {
   }
 
   function setCanvasShape() {
-    options.squareCanvas
-      ? $("#simCanvas").addClass("squareCanvas")
-      : $("#simCanvas").removeClass("squareCanvas");
+    // Canvas shape CSS removed for headless mode - canvas size is fixed
   }
 
   function setSimCSS() {
-    // Skip CSS manipulation in headless mode (no header element)
-    if (window.HEADLESS_MODE) return;
-    // Set the CSS of simulation page, accounting for the header visible on larger screens.
-    const headerStyles = window.getComputedStyle(
-      document.getElementById("header"),
-    );
-    const hasHeader = headerStyles.getPropertyValue("display") != "none";
-    const height =
-      document.getElementById("header").getBoundingClientRect().height + "px";
-    // Set CSS variables for the simulation.
-    $(":root").css("--header-height", hasHeader ? height : "0px");
-    // Hide the logo if we can see the header. Don't worry about making it visible again if the header disappears.
-    if (hasHeader) {
-      $("#logo").hide();
-    }
+    // CSS manipulation removed for headless mode
   }
 
   function resizeTextures(shift = 0) {
@@ -4491,30 +3891,13 @@ async function VisualPDE(url) {
   }
 
   function pauseSim() {
-    if (!uiHidden && !window.HEADLESS_MODE) {
-      $("#pause").hide();
-      $("#pause").invisible();
-      $("#play").show();
-      $("#play").visible();
-    }
+    // Headless-only: no UI updates needed
     isRunning = false;
-    if (!window.HEADLESS_MODE) {
-      renderIfNotRunning();
-    }
   }
 
   function playSim() {
-    if (!uiHidden && !window.HEADLESS_MODE) {
-      $("#play").hide();
-      $("#play").invisible();
-      $("#pause").show();
-      $("#pause").visible();
-    }
-    shouldCheckNaN = true;
-    if (!window.HEADLESS_MODE) {
-      window.clearTimeout(NaNTimer);
-      NaNTimer = setTimeout(checkForNaN, 1000);
-    }
+    // Headless-only: no UI updates or NaN checking needed
+    shouldCheckNaN = false;
     isRunning = true;
   }
 
@@ -4522,30 +3905,18 @@ async function VisualPDE(url) {
     if (options.setSeed) {
       seed = options.randSeed;
     }
-    // Support external seed for reproducibility in headless mode
+    // Support external seed for reproducibility
     if (window.VPDE_SEED !== undefined) {
       seed = window.VPDE_SEED;
     }
     updateRandomSeed();
     uniforms.t.value = 0.0;
     canAutoPause = true;
-    if (!window.HEADLESS_MODE) {
-      updateTimeDisplay();
-    }
     clearTextures();
-    if (!window.HEADLESS_MODE) {
-      clearProbe();
-    }
     render(true);
     // Reset time-tracking stats.
     lastT = uniforms.t.value;
     lastTime = performance.now();
-    // Start a timer that checks for NaNs every second (not in headless mode).
-    if (!window.HEADLESS_MODE) {
-      shouldCheckNaN = true;
-      window.clearTimeout(NaNTimer);
-      checkForNaN();
-    }
   }
 
   function parseReactionStrings() {
@@ -5357,11 +4728,7 @@ async function VisualPDE(url) {
     // Configure views.
     configureViews();
 
-    // Replace the GUI (skip in headless mode).
-    if (!window.HEADLESS_MODE) {
-      deleteGUIs();
-      initGUI();
-    }
+    // GUI initialization removed for headless mode
 
     // Apply any specified view.
     if (options.activeViewInd >= options.views.length) {
@@ -5404,16 +4771,7 @@ async function VisualPDE(url) {
     // Set the camera.
     configureCameraAndClicks();
 
-    // To get around an annoying bug in dat.GUI.image, in which the
-    // controller doesn't update the value of the underlying property,
-    // we'll destroy and create a new image controller everytime we load
-    // a preset. (Skip in headless mode - no GUI).
-    if (!window.HEADLESS_MODE && imControllerOne) {
-      imControllerOne.remove();
-      imControllerTwo.remove();
-      imControllerBlend.remove();
-      createImageControllers();
-    }
+    // Image controllers removed for headless mode
 
     // Configure interpolation.
     configureManualInterpolation();
@@ -8593,11 +7951,7 @@ async function VisualPDE(url) {
     updateView("maxColourValue");
     uniforms.minColourValue.value = cLims[0];
     uniforms.maxColourValue.value = cLims[1];
-    if (!window.HEADLESS_MODE) {
-      controllers["maxColourValue"].updateDisplay();
-      controllers["minColourValue"].updateDisplay();
-      updateColourbarLims();
-    }
+    // GUI controller updates removed for headless mode
   }
 
   /**
@@ -10447,49 +9801,7 @@ async function VisualPDE(url) {
    * The `$("#simCanvas").css("cursor", "url('images/cursor-circle.svg') 12 12, auto")` line sets the cursor to an image. The "12 12" part specifies the position of the hotspot, or the cursor's active point. The "auto" part is a fallback cursor style in case the image cannot be displayed.
    */
   function configureCursorDisplay() {
-    // Default cursor.
-    $("#simCanvas").css("cursor", "auto");
-    if (
-      !options.brushEnabled ||
-      options.plotType == "surface" ||
-      options.plotType == "line"
-    ) {
-      return;
-    }
-
-    // If we're looking at a plane plot, match the brush type.
-    switch (options.brushType) {
-      case "circle":
-        $("#simCanvas").css(
-          "cursor",
-          "url('images/cursor-circle.svg') 12 12, auto",
-        );
-        break;
-      case "square":
-        $("#simCanvas").css(
-          "cursor",
-          "url('images/cursor-square.svg') 29 35, auto",
-        );
-        break;
-      case "hline":
-        $("#simCanvas").css(
-          "cursor",
-          "url('images/cursor-hline.svg') 32 32, auto",
-        );
-        break;
-      case "vline":
-        $("#simCanvas").css(
-          "cursor",
-          "url('images/cursor-vline.svg') 32 32, auto",
-        );
-        break;
-      case "custom":
-        $("#simCanvas").css(
-          "cursor",
-          "url('images/cursor-droplet.svg') 12 12, auto",
-        );
-        break;
-    }
+    // Cursor display removed for headless mode
   }
 
   /**

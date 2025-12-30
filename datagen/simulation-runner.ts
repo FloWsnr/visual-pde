@@ -66,8 +66,8 @@ export class SimulationRunner {
     // Build URL with preset
     const url = `file://${this.htmlPath}?preset=${encodeURIComponent(config.preset)}`;
 
-    // Navigate to the simulation page
-    await this.page.goto(url, { waitUntil: "networkidle0", timeout: 30000 });
+    // Navigate to the simulation page - use domcontentloaded since we wait for VPDE_READY
+    await this.page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
 
     // Wait for VPDE to be ready
     await this.page.waitForFunction(() => window.VPDE_READY === true, {
